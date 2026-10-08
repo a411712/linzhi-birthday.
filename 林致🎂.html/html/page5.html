@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生日惊喜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background-color: #87CEEB;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #ribbon-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .v-text-wrap {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 56px;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .v-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .char-slot {
+            position: relative;
+            width: 58px;
+            height: 58px;
+            margin: 8px 0;
+        }
+
+        .brush-glyph {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4682B4;
+            font-family: "STXingkai", "华文行楷", "Ma Shan Zheng", "KaiTi", cursive;
+            font-size: 46px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .char-slot.written .brush-glyph {
+            opacity: 1;
+        }
+
+        .char-slot svg {
+            transition: opacity 0.3s ease;
+        }
+
+        .char-slot.written svg {
+            opacity: 0;
+        }
+
+        /* 署名列：小一号、灰蓝、笔画动画不适用时直接浮现 */
+        .v-col--sign {
+            gap: 2px;
+        }
+
+        /* 「莳意」列：正文大字写完后，下方落款 */
+        .v-col--name {
+            justify-content: flex-end;
+            padding-top: 120px;
+        }
+
+        .v-col--name .char-slot {
+            width: 44px;
+            height: 44px;
+            margin: 6px 0;
+        }
+
+        .v-col--name .brush-glyph {
+            font-size: 34px;
+        }
+
+        .v-col--sign .char-slot {
+            width: 34px;
+            height: 34px;
+            margin: 5px 0;
+        }
+
+        .v-col--sign .brush-glyph {
+            font-size: 28px;
+            color: #6482B4;
+            font-size: clamp(20px, 3.4vh, 28px);
+        }
+
+        @keyframes charIn {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ma-shan-zheng@5/index.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
+</head>
+<body>
+    <canvas id="ribbon-canvas"></canvas>
+    <div class="v-text-wrap"></div>
+
+    <script>
+        const canvas = document.getElementById('ribbon-canvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF6FB5', '#FF9F45', '#B983FF', '#FFFFFF'];
+        const butterflyColors = ['#1E6091', '#2A7FB8', '#3A86C8', '#4682B4', '#5B9BD5', '#1B4F72'];
+        let ribbons = [];
+        let butterflies = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const count = Math.min(140, Math.floor(canvas.width * canvas.height / 12000));
+            ribbons = Array.from({ length: count }, createRibbon);
+            butterflies = Array.from({ length: 9 }, createButterfly);
+        }
+
+        function createRibbon(fromTop) {
+            return {
+                x: Math.random() * canvas.width,
+                y: fromTop ? -20 : Math.random() * canvas.height,
+                w: 6 + Math.random() * 6,
+                h: 12 + Math.random() * 14,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vy: 1 + Math.random() * 2,
+                swing: 1 + Math.random() * 2,
+                phase: Math.random() * Math.PI * 2,
+                rot: Math.random() * Math.PI * 2,
+                vrot: (Math.random() - 0.5) * 0.15
+            };
+        }
+
+        function createButterfly() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 10 + Math.random() * 8,
+                color: butterflyColors[Math.floor(Math.random() * butterflyColors.length)],
+                angle: Math.random() * Math.PI * 2,
+                speed: 0.6 + Math.random() * 0.8,
+                turn: (Math.random() - 0.5) * 0.04,
+                flap: Math.random() * Math.PI * 2,
+                flapSpeed: 0.18 + Math.random() * 0.12,
+                wander: Math.random() * Math.PI * 2
+            };
+        }
+
+        function drawButterfly(b) {
+            b.flap += b.flapSpeed;
+            b.wander += 0.02;
+            b.angle += b.turn + Math.sin(b.wander) * 0.03;
+            b.x += Math.cos(b.angle) * b.speed;
+            b.y += Math.sin(b.angle) * b.speed;
+
+            if (b.x < -40) b.x = canvas.width + 40;
+            if (b.x > canvas.width + 40) b.x = -40;
+            if (b.y < -40) b.y = canvas.height + 40;
+            if (b.y > canvas.height + 40) b.y = -40;
+
+            const flapScale = 0.35 + Math.abs(Math.sin(b.flap)) * 0.65;
+            const s = b.size;
+
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.angle + Math.PI / 2);
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.55, -s * 0.55, s * 0.6, s * 0.85, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.45, s * 0.5, s * 0.45, s * 0.6, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.55, -s * 0.55, s * 0.6, s * 0.85, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.45, s * 0.5, s * 0.45, s * 0.6, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.arc(-s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.arc(s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.strokeStyle = '#10334f';
+            ctx.lineWidth = Math.max(1.5, s * 0.14);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.lineTo(0, s * 0.8);
+            ctx.stroke();
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(-s * 0.3, -s * 1.1, -s * 0.45, -s * 1.2);
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(s * 0.3, -s * 1.1, s * 0.45, -s * 1.2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ribbons.forEach((r, i) => {
+                r.phase += 0.02;
+                r.y += r.vy;
+                r.x += Math.sin(r.phase) * r.swing * 0.5;
+                r.rot += r.vrot;
+
+                if (r.y > canvas.height + 20) {
+                    ribbons[i] = createRibbon(true);
+                    ribbons[i].x = Math.random() * canvas.width;
+                }
+
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                ctx.rotate(r.rot);
+                ctx.fillStyle = r.color;
+                ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
+                ctx.restore();
+            });
+            butterflies.forEach(drawButterfly);
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        draw();
+
+        // 第五页：竖排祝福语——先逐笔书写，写完渐变为毛笔字形
+        const text1 = '祝林致生日快乐！';
+        const text2 = '岁岁安然，';
+        const text3 = '歌声不息。';
+        const text4 = '莳意';
+        const text5 = 'by莳意';
+        const wrap = document.querySelector('.v-text-wrap');
+
+        function makeSlot(col) {
+            const slot = document.createElement('div');
+            slot.className = 'char-slot';
+            col.appendChild(slot);
+            return slot;
+        }
+
+        function showPunct(ch, col, onDone) {
+            const slot = makeSlot(col);
+            slot.innerHTML = '<div class="brush-glyph">' + ch + '</div>';
+            requestAnimationFrame(() => slot.classList.add('written'));
+            setTimeout(onDone, 420);
+        }
+
+        function writeChar(ch, col, onDone) {
+            if (/[！，。！？、：；]/.test(ch)) {
+                showPunct(ch, col, onDone);
+                return;
+            }
+            const slot = makeSlot(col);
+            const glyph = document.createElement('div');
+            glyph.className = 'brush-glyph';
+            glyph.textContent = ch;
+            slot.appendChild(glyph);
+
+            const writer = HanziWriter.create(slot, ch, {
+                width: 58,
+                height: 58,
+                padding: 2,
+                strokeColor: '#4682B4',
+                strokeAnimationSpeed: 3.2,
+                delayBetweenStrokes: 70,
+                showOutline: false
+            });
+            writer.animateCharacter({
+                onComplete: () => {
+                    // 写完交叉淡化：笔画退场，毛笔字形登场
+                    slot.classList.add('written');
+                    setTimeout(onDone, 180);
+                }
+            });
+        }
+
+        function writeSequence(text, col, idx, onDone) {
+            if (idx >= text.length) {
+                if (onDone) onDone();
+                return;
+            }
+            writeChar(text[idx], col, () => writeSequence(text, col, idx + 1, onDone));
+        }
+
+        // 兜底：无网络时退回逐字浮现
+        function typeVertical(text, el, idx, onDone) {
+            if (idx >= text.length) {
+                if (onDone) onDone();
+                return;
+            }
+            const slot = makeSlot(el);
+            slot.innerHTML = '<div class="brush-glyph">' + text[idx] + '</div>';
+            requestAnimationFrame(() => slot.classList.add('written'));
+            setTimeout(() => typeVertical(text, el, idx + 1, onDone), 300);
+        }
+
+        setTimeout(() => {
+            // 竖排从右往左读：右1=祝林致…，右2=岁岁安然，右3=歌声不息，右4=林致，右5（最左）=by莳意
+            const col1 = document.createElement('div');
+            col1.className = 'v-col';
+            const col2 = document.createElement('div');
+            col2.className = 'v-col';
+            const col3 = document.createElement('div');
+            col3.className = 'v-col';
+            const col4 = document.createElement('div');
+            col4.className = 'v-col v-col--name';
+            const col5 = document.createElement('div');
+            col5.className = 'v-col v-col--sign';
+            wrap.appendChild(col1);
+            wrap.appendChild(col2);
+            wrap.appendChild(col3);
+            wrap.appendChild(col4);
+            wrap.appendChild(col5);
+
+            function next() {
+                const chain = typeof HanziWriter !== 'undefined'
+                    ? (t, c, cb) => writeSequence(t, c, 0, cb)
+                    : (t, c, cb) => typeVertical(t, c, 0, cb);
+                chain(text1, col1, () =>
+                    chain(text2, col2, () =>
+                        chain(text3, col3, () =>
+                            chain(text4, col4, () =>
+                                chain(text5, col5, null)))));
+            }
+            next();
+        }, 500);
+
+        // 背景音乐：贯穿所有页面的低音量背景乐（若顶层尚未启动则启动；点击兜底）
+        const topWin = window.top;
+        function ensureBgm() {
+            if (window.location.search.includes('bgm=1') && !topWin.__bgmStarted) {
+                try {
+                    const bgm = new Audio('../music/提取音乐_20261007214130.mp3');
+                    bgm.loop = true;
+                    bgm.volume = 0.18;
+                    bgm.play().then(() => { topWin.__bgmStarted = bgm; }).catch(() => {});
+                } catch (e) {}
+            }
+        }
+        ensureBgm();
+        document.addEventListener('click', () => { if (!topWin.__bgmStarted) ensureBgm(); }, { once: true });
+    </script>
+</body>
+</html>

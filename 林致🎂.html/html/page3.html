@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生日惊喜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background-color: #87CEEB;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #ribbon-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .title-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4682B4;
+            font-family: "STXingkai", "华文行楷", "KaiTi", serif;
+            font-size: 64px;
+            white-space: nowrap;
+            letter-spacing: 12px;
+            line-height: 1.4;
+            opacity: 0;
+            z-index: 3;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
+        .title-text.show {
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .title-text.hide {
+            animation: fadeOut 0.8s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translate(-50%, -50%); }
+            to { opacity: 0; transform: translate(-50%, -60%); }
+        }
+
+        /* 倒计时数字：横向显示 */
+        .title-text.horizontal {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            letter-spacing: 0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="ribbon-canvas"></canvas>
+    <div class="title-text" id="title-text"></div>
+
+    <script>
+        const canvas = document.getElementById('ribbon-canvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF6FB5', '#FF9F45', '#B983FF', '#FFFFFF'];
+        const butterflyColors = ['#1E6091', '#2A7FB8', '#3A86C8', '#4682B4', '#5B9BD5', '#1B4F72'];
+        let ribbons = [];
+        let butterflies = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const count = Math.min(140, Math.floor(canvas.width * canvas.height / 12000));
+            ribbons = Array.from({ length: count }, createRibbon);
+            butterflies = Array.from({ length: 9 }, createButterfly);
+        }
+
+        function createRibbon(fromTop) {
+            return {
+                x: Math.random() * canvas.width,
+                y: fromTop ? -20 : Math.random() * canvas.height,
+                w: 6 + Math.random() * 6,
+                h: 12 + Math.random() * 14,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vy: 1 + Math.random() * 2,
+                swing: 1 + Math.random() * 2,
+                phase: Math.random() * Math.PI * 2,
+                rot: Math.random() * Math.PI * 2,
+                vrot: (Math.random() - 0.5) * 0.15
+            };
+        }
+
+        function createButterfly() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 10 + Math.random() * 8,
+                color: butterflyColors[Math.floor(Math.random() * butterflyColors.length)],
+                angle: Math.random() * Math.PI * 2,
+                speed: 0.6 + Math.random() * 0.8,
+                turn: (Math.random() - 0.5) * 0.04,
+                flap: Math.random() * Math.PI * 2,
+                flapSpeed: 0.18 + Math.random() * 0.12,
+                wander: Math.random() * Math.PI * 2
+            };
+        }
+
+        function drawButterfly(b) {
+            b.flap += b.flapSpeed;
+            b.wander += 0.02;
+            b.angle += b.turn + Math.sin(b.wander) * 0.03;
+            b.x += Math.cos(b.angle) * b.speed;
+            b.y += Math.sin(b.angle) * b.speed;
+
+            if (b.x < -40) b.x = canvas.width + 40;
+            if (b.x > canvas.width + 40) b.x = -40;
+            if (b.y < -40) b.y = canvas.height + 40;
+            if (b.y > canvas.height + 40) b.y = -40;
+
+            const flapScale = 0.35 + Math.abs(Math.sin(b.flap)) * 0.65;
+            const s = b.size;
+
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.angle + Math.PI / 2);
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.55, -s * 0.55, s * 0.6, s * 0.85, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.45, s * 0.5, s * 0.45, s * 0.6, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.55, -s * 0.55, s * 0.6, s * 0.85, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.45, s * 0.5, s * 0.45, s * 0.6, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.arc(-s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.arc(s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.strokeStyle = '#10334f';
+            ctx.lineWidth = Math.max(1.5, s * 0.14);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.lineTo(0, s * 0.8);
+            ctx.stroke();
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(-s * 0.3, -s * 1.1, -s * 0.45, -s * 1.2);
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(s * 0.3, -s * 1.1, s * 0.45, -s * 1.2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ribbons.forEach((r, i) => {
+                r.phase += 0.02;
+                r.y += r.vy;
+                r.x += Math.sin(r.phase) * r.swing * 0.5;
+                r.rot += r.vrot;
+
+                if (r.y > canvas.height + 20) {
+                    ribbons[i] = createRibbon(true);
+                    ribbons[i].x = Math.random() * canvas.width;
+                }
+
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                ctx.rotate(r.rot);
+                ctx.fillStyle = r.color;
+                ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
+                ctx.restore();
+            });
+            butterflies.forEach(drawButterfly);
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        draw();
+
+        // 标题逐句播放：每句逐字出现 → 立即消失 → 下一句
+        const titleEl = document.getElementById('title-text');
+        const sentences = [
+            'LASER主唱大人',
+            '今天是你的生日',
+            '请接收芝士和追光者的祝福',
+            '请打开声音'
+        ];
+
+        function showSentence(text, onDone) {
+            titleEl.classList.remove('hide');
+            titleEl.classList.add('show');
+            titleEl.textContent = '';
+            let i = 0;
+
+            function typeNext() {
+                if (i < text.length) {
+                    titleEl.textContent = text.slice(0, i + 1);
+                    i++;
+                    setTimeout(typeNext, 240);
+                } else {
+                    // 播放完立马消失
+                    setTimeout(() => {
+                        titleEl.classList.remove('show');
+                        titleEl.classList.add('hide');
+                        setTimeout(onDone, 800); // 等消失动画结束
+                    }, 300);
+                }
+            }
+            typeNext();
+        }
+
+        function showNumber(num, onDone) {
+            titleEl.classList.remove('hide');
+            titleEl.classList.add('show', 'horizontal');
+            titleEl.textContent = String(num);
+            // 数字显示后立马消失
+            setTimeout(() => {
+                titleEl.classList.remove('show');
+                titleEl.classList.add('hide');
+                setTimeout(() => {
+                    titleEl.classList.remove('horizontal');
+                    onDone();
+                }, 600); // 等消失动画结束
+            }, 700);
+        }
+
+        function countdown(nums, index, onDone) {
+            if (index >= nums.length) {
+                if (onDone) onDone();
+                return;
+            }
+            showNumber(nums[index], () => countdown(nums, index + 1, onDone));
+        }
+
+        function playSequence(index) {
+            if (index >= sentences.length || !sentences[index]) {
+                // 句子播放完，开始倒计时，倒计时结束以 iframe 覆盖方式进入第四页（背景乐不断）
+                countdown([3, 2, 1], 0, () => {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = 'page4.html?bgm=1';
+                    iframe.allow = 'autoplay';
+                    iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;z-index:400;';
+                    document.body.appendChild(iframe);
+                });
+                return;
+            }
+            showSentence(sentences[index], () => playSequence(index + 1));
+        }
+
+        setTimeout(() => playSequence(0), 400);
+
+        // 背景音乐：贯穿所有页面的低音量背景乐（若顶层尚未启动则启动；点击兜底）
+        const topWin = window.top;
+        function ensureBgm() {
+            if (window.location.search.includes('bgm=1') && !topWin.__bgmStarted) {
+                try {
+                    const bgm = new Audio('../music/提取音乐_20261007214130.mp3');
+                    bgm.loop = true;
+                    bgm.volume = 0.18;
+                    bgm.play().then(() => { topWin.__bgmStarted = bgm; }).catch(() => {});
+                } catch (e) {}
+            }
+        }
+        ensureBgm();
+        document.addEventListener('click', () => { if (!topWin.__bgmStarted) ensureBgm(); }, { once: true });
+    </script>
+</body>
+</html>

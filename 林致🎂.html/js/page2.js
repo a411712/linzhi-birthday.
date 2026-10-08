@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生日惊喜</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background-color: #87CEEB;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #ribbon-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .scatter-photo {
+            position: absolute;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+            opacity: 0;
+            animation: photoIn 0.6s ease forwards;
+        }
+
+        @keyframes photoIn {
+            from { opacity: 0; transform: scale(0.7) rotate(var(--rot, 0deg)); }
+            to { opacity: 1; transform: scale(1) rotate(var(--rot, 0deg)); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="ribbon-canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('ribbon-canvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF6FB5', '#FF9F45', '#B983FF', '#FFFFFF'];
+        const butterflyColors = ['#1E6091', '#2A7FB8', '#3A86C8', '#4682B4', '#5B9BD5', '#1B4F72'];
+        let ribbons = [];
+        let butterflies = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const count = Math.min(140, Math.floor(canvas.width * canvas.height / 12000));
+            ribbons = Array.from({ length: count }, createRibbon);
+            butterflies = Array.from({ length: 9 }, createButterfly);
+        }
+
+        function createRibbon(fromTop) {
+            return {
+                x: Math.random() * canvas.width,
+                y: fromTop ? -20 : Math.random() * canvas.height,
+                w: 6 + Math.random() * 6,
+                h: 12 + Math.random() * 14,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vy: 1 + Math.random() * 2,
+                swing: 1 + Math.random() * 2,
+                phase: Math.random() * Math.PI * 2,
+                rot: Math.random() * Math.PI * 2,
+                vrot: (Math.random() - 0.5) * 0.15
+            };
+        }
+
+        function createButterfly() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 10 + Math.random() * 8,
+                color: butterflyColors[Math.floor(Math.random() * butterflyColors.length)],
+                angle: Math.random() * Math.PI * 2,
+                speed: 0.6 + Math.random() * 0.8,
+                turn: (Math.random() - 0.5) * 0.04,
+                flap: Math.random() * Math.PI * 2,
+                flapSpeed: 0.18 + Math.random() * 0.12,
+                wander: Math.random() * Math.PI * 2
+            };
+        }
+
+        function drawButterfly(b) {
+            b.flap += b.flapSpeed;
+            b.wander += 0.02;
+            b.angle += b.turn + Math.sin(b.wander) * 0.03;
+            b.x += Math.cos(b.angle) * b.speed;
+            b.y += Math.sin(b.angle) * b.speed;
+
+            if (b.x < -40) b.x = canvas.width + 40;
+            if (b.x > canvas.width + 40) b.x = -40;
+            if (b.y < -40) b.y = canvas.height + 40;
+            if (b.y > canvas.height + 40) b.y = -40;
+
+            const flapScale = 0.35 + Math.abs(Math.sin(b.flap)) * 0.65;
+            const s = b.size;
+
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.angle + Math.PI / 2);
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.55, -s * 0.55, s * 0.6, s * 0.85, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.45, s * 0.5, s * 0.45, s * 0.6, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.55, -s * 0.55, s * 0.6, s * 0.85, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.45, s * 0.5, s * 0.45, s * 0.6, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.arc(-s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.arc(s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.strokeStyle = '#10334f';
+            ctx.lineWidth = Math.max(1.5, s * 0.14);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.lineTo(0, s * 0.8);
+            ctx.stroke();
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(-s * 0.3, -s * 1.1, -s * 0.45, -s * 1.2);
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(s * 0.3, -s * 1.1, s * 0.45, -s * 1.2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ribbons.forEach((r, i) => {
+                r.phase += 0.02;
+                r.y += r.vy;
+                r.x += Math.sin(r.phase) * r.swing * 0.5;
+                r.rot += r.vrot;
+
+                if (r.y > canvas.height + 20) {
+                    ribbons[i] = createRibbon(true);
+                    ribbons[i].x = Math.random() * canvas.width;
+                }
+
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                ctx.rotate(r.rot);
+                ctx.fillStyle = r.color;
+                ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
+                ctx.restore();
+            });
+            butterflies.forEach(drawButterfly);
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        draw();
+
+        // 第二页：7 张照片随机散落成照片墙，依次浮现
+        const photoUrls = [
+            '../img/微信图片_20261007162823_91_7.jpg',
+            '../img/微信图片_20261007162824_92_7.jpg',
+            '../img/微信图片_20261007162825_93_7.jpg',
+            '../img/微信图片_20261007162826_94_7.jpg',
+            '../img/微信图片_20261007162826_95_7.jpg',
+            '../img/微信图片_20261007162827_96_7.jpg',
+            '../img/微信图片_20261007165151_98_7.jpg'
+        ];
+
+        function loadImage(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve({ url, w: img.naturalWidth, h: img.naturalHeight });
+                img.onerror = () => resolve({ url, w: 160, h: 160 });
+                img.src = url;
+            });
+        }
+
+        function scatterPhotos() {
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const maxW = Math.max(220, Math.min(300, vw / 7));
+            const gap = 12;
+
+            Promise.all(photoUrls.map(loadImage)).then((items) => {
+                const placed = [];
+                items.forEach((item, idx) => {
+                    const scale = maxW / item.w;
+                    const w = maxW;
+                    const h = item.h * scale;
+                    const rot = (Math.random() - 0.5) * 16;
+
+                    let x, y, ok = false, tries = 0;
+                    while (!ok && tries < 1200) {
+                        x = Math.random() * Math.max(1, vw - w);
+                        y = Math.random() * Math.max(1, vh - h);
+                        ok = placed.every(p =>
+                            x + w < p.x - gap ||
+                            x > p.x + p.w + gap ||
+                            y + h < p.y - gap ||
+                            y > p.y + p.h + gap
+                        );
+                        tries++;
+                    }
+                    placed.push({ x, y, w, h, rot, url: item.url });
+                });
+
+                placed.forEach((p, i) => {
+                    const img = document.createElement('img');
+                    img.src = p.url;
+                    img.className = 'scatter-photo';
+                    img.style.left = p.x + 'px';
+                    img.style.top = p.y + 'px';
+                    img.style.width = p.w + 'px';
+                    img.style.height = p.h + 'px';
+                    img.style.zIndex = 2 + i;
+                    img.style.setProperty('--rot', p.rot + 'deg');
+                    img.style.animationDelay = (i * 0.25) + 's';
+                    document.body.appendChild(img);
+                });
+            });
+        }
+
+        scatterPhotos();
+
+        // 最后一张 1.5s 开始出现 + 0.6s 动画 ≈ 2.1s 摆满，再留欣赏时间后自动跳转第三页
+        setTimeout(() => {
+            // 以 iframe 覆盖方式进入第三页，页面不卸载、背景乐不断
+            const iframe = document.createElement('iframe');
+            iframe.src = 'page3.html?bgm=1';
+            iframe.allow = 'autoplay';
+            iframe.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;border:none;z-index:300;';
+            document.body.appendChild(iframe);
+        }, 5200);
+
+        // 背景音乐：贯穿所有页面的低音量背景乐（若顶层尚未启动则启动；点击兜底）
+        const topWin = window.top;
+        function ensureBgm() {
+            if (window.location.search.includes('bgm=1') && !topWin.__bgmStarted) {
+                try {
+                    const bgm = new Audio('../music/提取音乐_20261007214130.mp3');
+                    bgm.loop = true;
+                    bgm.volume = 0.18;
+                    bgm.play().then(() => { topWin.__bgmStarted = bgm; }).catch(() => {});
+                } catch (e) {}
+            }
+        }
+        ensureBgm();
+        document.addEventListener('click', () => { if (!topWin.__bgmStarted) ensureBgm(); }, { once: true });
+    </script>
+</body>
+</html>

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>林致 · 生日快乐</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ma-shan-zheng@5/index.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            background-color: #87CEEB;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 全站共用背景动画层 */
+        #bg-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* 场景图层 */
+        .scene {
+            position: fixed;
+            inset: 0;
+            display: none;
+            z-index: 2;
+        }
+
+        .scene.active {
+            display: block;
+            animation: sceneIn 0.6s ease;
+        }
+
+        @keyframes sceneIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ========== 场景1：口令页 ========== */
+        .greeting-text {
+            position: absolute;
+            top: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #6482B4;
+            font-family: "STXingkai", "华文行楷", "XingKai SC", "KaiTi", "STKaiti", cursive;
+            font-size: 60px;
+            white-space: nowrap;
+            z-index: 2;
+        }
+
+        .pass-input {
+            position: absolute;
+            top: 300px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 320px;
+            background-color: #f0f0f0;
+            font-size: 20px;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 2px solid rgba(70, 130, 180, 0.35);
+            text-align: center;
+            outline: none;
+            z-index: 2;
+        }
+
+        .pass-input:focus {
+            border-color: #4682B4;
+        }
+
+        .enter-btn {
+            position: absolute;
+            top: 368px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 320px;
+            background-color: #b0c4de;
+            color: #1f3a52;
+            font-size: 18px;
+            padding: 6px 20px;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .enter-btn:hover {
+            background-color: #9db4d1;
+        }
+
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.25);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .modal-mask.show {
+            display: flex;
+        }
+
+        .modal-box {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 28px 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            animation: pop 0.25s ease;
+        }
+
+        @keyframes pop {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-answer {
+            font-size: 24px;
+            color: #4682B4;
+            margin-bottom: 12px;
+        }
+
+        .modal-tip {
+            font-size: 18px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .modal-ok {
+            background-color: #b0c4de;
+            color: #1f3a52;
+            font-size: 16px;
+            padding: 8px 36px;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+        }
+
+        .modal-ok:hover {
+            background-color: #9db4d1;
+        }
+
+        /* ========== 场景2/4：散落照片墙 ========== */
+        .scatter-photo {
+            position: absolute;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+            opacity: 0;
+            animation: photoIn 0.6s ease forwards;
+        }
+
+        @keyframes photoIn {
+            from { opacity: 0; transform: scale(0.7) rotate(var(--rot, 0deg)); }
+            to { opacity: 1; transform: scale(1) rotate(var(--rot, 0deg)); }
+        }
+
+        /* ========== 场景3：连播字幕 ========== */
+        .title-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4682B4;
+            font-family: "STXingkai", "华文行楷", "KaiTi", serif;
+            font-size: 64px;
+            white-space: nowrap;
+            letter-spacing: 12px;
+            line-height: 1.4;
+            opacity: 0;
+            z-index: 3;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
+        .title-text.show {
+            animation: t3In 0.6s ease forwards;
+        }
+
+        .title-text.hide {
+            animation: t3Out 0.8s ease forwards;
+        }
+
+        /* 倒计时数字：横向显示 */
+        .title-text.horizontal {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            letter-spacing: 0;
+        }
+
+        @keyframes t3In {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        @keyframes t3Out {
+            from { opacity: 1; transform: translate(-50%, -50%); }
+            to { opacity: 0; transform: translate(-50%, -60%); }
+        }
+
+        /* ========== 场景4：播放/下一页按钮 ========== */
+        #play-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            background: #4682B4;
+            color: #fff;
+            font-size: 18px;
+            padding: 14px 28px;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            user-select: none;
+        }
+
+        #next-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 101;
+            background: #4682B4;
+            color: #fff;
+            font-size: 16px;
+            padding: 12px 24px;
+            border-radius: 999px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            user-select: none;
+        }
+
+        /* ========== 场景5：竖排逐笔书写祝福 ========== */
+        .v-text-wrap {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: row-reverse;
+            gap: 56px;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .v-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .char-slot {
+            position: relative;
+            width: 58px;
+            height: 58px;
+            margin: 8px 0;
+        }
+
+        .brush-glyph {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4682B4;
+            font-family: "STXingkai", "华文行楷", "Ma Shan Zheng", "KaiTi", cursive;
+            font-size: 46px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .char-slot.written .brush-glyph {
+            opacity: 1;
+        }
+
+        .char-slot svg {
+            transition: opacity 0.3s ease;
+        }
+
+        .char-slot.written svg {
+            opacity: 0;
+        }
+
+        /* 「莳意」落款列：正文写完后，下方落款 */
+        .v-col--name {
+            justify-content: flex-end;
+            padding-top: 120px;
+        }
+
+        .v-col--name .char-slot {
+            width: 44px;
+            height: 44px;
+            margin: 6px 0;
+        }
+
+        .v-col--name .brush-glyph {
+            font-size: 34px;
+        }
+
+        /* 「by莳意」署名列：小一号、灰蓝 */
+        .v-col--sign {
+            gap: 2px;
+        }
+
+        .v-col--sign .char-slot {
+            width: 34px;
+            height: 34px;
+            margin: 5px 0;
+        }
+
+        .v-col--sign .brush-glyph {
+            color: #6482B4;
+            font-size: clamp(20px, 3.4vh, 28px);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- 场景1：口令页 -->
+    <section class="scene active" id="scene1">
+        <div class="greeting-text">林致  生日快乐</div>
+        <input type="text" id="pass-input" class="pass-input" placeholder="输入通关密语，按回车进入" maxlength="20">
+        <button type="button" id="enter-btn" class="enter-btn">进 入</button>
+
+        <div class="modal-mask" id="modal-mask">
+            <div class="modal-box">
+                <div class="modal-answer">林致生日快乐</div>
+                <div class="modal-tip">请重新输入</div>
+                <button type="button" id="modal-ok" class="modal-ok">知道了</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 场景2：照片墙（照片由脚本注入） -->
+    <section class="scene" id="scene2"></section>
+
+    <!-- 场景3：连播字幕 -->
+    <section class="scene" id="scene3">
+        <div class="title-text" id="title-text"></div>
+    </section>
+
+    <!-- 场景4：照片墙 + 祝福音频（照片由脚本注入） -->
+    <section class="scene" id="scene4">
+        <div id="play-btn">▶ 播放祝福</div>
+        <div id="next-btn">下一页 →</div>
+    </section>
+
+    <!-- 场景5：竖排逐笔书写祝福 -->
+    <section class="scene" id="scene5">
+        <div class="v-text-wrap"></div>
+    </section>
+
+    <script>
+        /* ================= 全站背景动画：彩带 + 蓝蝴蝶 ================= */
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF', '#FF6FB5', '#FF9F45', '#B983FF', '#FFFFFF'];
+        const butterflyColors = ['#1E6091', '#2A7FB8', '#3A86C8', '#4682B4', '#5B9BD5', '#1B4F72'];
+        let ribbons = [];
+        let butterflies = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const count = Math.min(140, Math.floor(canvas.width * canvas.height / 12000));
+            ribbons = Array.from({ length: count }, createRibbon);
+            butterflies = Array.from({ length: 9 }, createButterfly);
+        }
+
+        function createRibbon(fromTop) {
+            return {
+                x: Math.random() * canvas.width,
+                y: fromTop ? -20 : Math.random() * canvas.height,
+                w: 6 + Math.random() * 6,
+                h: 12 + Math.random() * 14,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vy: 1 + Math.random() * 2,
+                swing: 1 + Math.random() * 2,
+                phase: Math.random() * Math.PI * 2,
+                rot: Math.random() * Math.PI * 2,
+                vrot: (Math.random() - 0.5) * 0.15
+            };
+        }
+
+        function createButterfly() {
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 10 + Math.random() * 8,
+                color: butterflyColors[Math.floor(Math.random() * butterflyColors.length)],
+                angle: Math.random() * Math.PI * 2,
+                speed: 0.6 + Math.random() * 0.8,
+                turn: (Math.random() - 0.5) * 0.04,
+                flap: Math.random() * Math.PI * 2,
+                flapSpeed: 0.18 + Math.random() * 0.12,
+                wander: Math.random() * Math.PI * 2
+            };
+        }
+
+        function drawButterfly(b) {
+            b.flap += b.flapSpeed;
+            b.wander += 0.02;
+            b.angle += b.turn + Math.sin(b.wander) * 0.03;
+            b.x += Math.cos(b.angle) * b.speed;
+            b.y += Math.sin(b.angle) * b.speed;
+
+            if (b.x < -40) b.x = canvas.width + 40;
+            if (b.x > canvas.width + 40) b.x = -40;
+            if (b.y < -40) b.y = canvas.height + 40;
+            if (b.y > canvas.height + 40) b.y = -40;
+
+            const flapScale = 0.35 + Math.abs(Math.sin(b.flap)) * 0.65;
+            const s = b.size;
+
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.rotate(b.angle + Math.PI / 2);
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = b.color;
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.55, -s * 0.55, s * 0.6, s * 0.85, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.45, s * 0.5, s * 0.45, s * 0.6, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.55, -s * 0.55, s * 0.6, s * 0.85, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(s * 0.45, s * 0.5, s * 0.45, s * 0.6, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.scale(flapScale, 1);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.arc(-s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.arc(s * 0.7, -s * 0.85, s * 0.13, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.strokeStyle = '#10334f';
+            ctx.lineWidth = Math.max(1.5, s * 0.14);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.lineTo(0, s * 0.8);
+            ctx.stroke();
+            ctx.lineWidth = Math.max(1, s * 0.06);
+            ctx.beginPath();
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(-s * 0.3, -s * 1.1, -s * 0.45, -s * 1.2);
+            ctx.moveTo(0, -s * 0.7);
+            ctx.quadraticCurveTo(s * 0.3, -s * 1.1, s * 0.45, -s * 1.2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ribbons.forEach((r, i) => {
+                r.phase += 0.02;
+                r.y += r.vy;
+                r.x += Math.sin(r.phase) * r.swing * 0.5;
+                r.rot += r.vrot;
+
+                if (r.y > canvas.height + 20) {
+                    ribbons[i] = createRibbon(true);
+                    ribbons[i].x = Math.random() * canvas.width;
+                }
+
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                ctx.rotate(r.rot);
+                ctx.fillStyle = r.color;
+                ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
+                ctx.restore();
+            });
+            butterflies.forEach(drawButterfly);
+            requestAnimationFrame(draw);
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        draw();
+
+        /* ================= 场景管理 ================= */
+        const sceneStart = {};
+
+        function gotoScene(n) {
+            document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+            document.getElementById('scene' + n).classList.add('active');
+            if (sceneStart[n]) sceneStart[n]();
+        }
+
+        /* ================= 背景音乐：贯穿全程的低音量背景乐 ================= */
+        let bgm = null;
+
+        function startBgm() {
+            if (bgm) return;
+            try {
+                bgm = new Audio('music/提取音乐_20261007214130.mp3');
+                bgm.loop = true;
+                bgm.volume = 0.18;
+                bgm.play().catch(() => {});
+            } catch (e) {}
+        }
+
+        /* ================= 照片散落（场景2/4共用） ================= */
+        function loadImage(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve({ url, w: img.naturalWidth, h: img.naturalHeight });
+                img.onerror = () => resolve({ url, w: 160, h: 160 });
+                img.src = url;
+            });
+        }
+
+        function scatterInto(container, urls, avoid) {
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const maxW = Math.max(220, Math.min(300, vw / 7));
+            const gap = 12; // 照片之间的最小间距
+
+            Promise.all(urls.map(loadImage)).then((items) => {
+                const placed = [];
+                items.forEach((item) => {
+                    const scale = maxW / item.w;
+                    const w = maxW;
+                    const h = item.h * scale;
+                    const rot = (Math.random() - 0.5) * 16;
+
+                    let x = 0, y = 0, ok = false, tries = 0;
+                    while (!ok && tries < 1200) {
+                        x = Math.random() * Math.max(1, vw - w);
+                        y = Math.random() * Math.max(1, vh - h);
+                        const noOverlap = placed.every(p =>
+                            x + w < p.x - gap ||
+                            x > p.x + p.w + gap ||
+                            y + h < p.y - gap ||
+                            y > p.y + p.h + gap
+                        );
+                        const noBtn = !avoid || !(
+                            x + w > avoid.x - gap &&
+                            x < avoid.x + avoid.w + gap &&
+                            y + h > avoid.y - gap &&
+                            y < avoid.y + avoid.h + gap
+                        );
+                        ok = noOverlap && noBtn;
+                        tries++;
+                    }
+                    placed.push({ x, y, w, h, rot, url: item.url });
+                });
+
+                placed.forEach((p, i) => {
+                    const img = document.createElement('img');
+                    img.src = p.url;
+                    img.className = 'scatter-photo';
+                    img.style.left = p.x + 'px';
+                    img.style.top = p.y + 'px';
+                    img.style.width = p.w + 'px';
+                    img.style.height = p.h + 'px';
+                    img.style.zIndex = 2 + i;
+                    img.style.setProperty('--rot', p.rot + 'deg');
+                    img.style.animationDelay = (i * 0.25) + 's';
+                    container.appendChild(img);
+                });
+            });
+        }
+
+        /* ================= 场景1：口令 ================= */
+        const passInput = document.getElementById('pass-input');
+        const enterBtn = document.getElementById('enter-btn');
+        const modalMask = document.getElementById('modal-mask');
+        const modalOk = document.getElementById('modal-ok');
+        const SECRET = '林致，生日快乐';
+
+        function tryEnter() {
+            if (passInput.value.trim() === SECRET) {
+                startBgm(); // 趁用户手势启动背景乐，之后页面切换音乐不间断
+                gotoScene(2);
+            } else {
+                modalMask.classList.add('show');
+            }
+        }
+
+        function closeError() {
+            modalMask.classList.remove('show');
+            passInput.value = '';
+            passInput.focus();
+        }
+
+        enterBtn.addEventListener('click', tryEnter);
+        modalOk.addEventListener('click', closeError);
+        modalMask.addEventListener('click', (e) => {
+            if (e.target === modalMask) closeError();
+        });
+        passInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') tryEnter();
+        });
+
+        /* ================= 场景2：照片墙（7张，自动进入场景3） ================= */
+        const scene2Photos = [
+            'img/微信图片_20261007162823_91_7.jpg',
+            'img/微信图片_20261007162824_92_7.jpg',
+            'img/微信图片_20261007162825_93_7.jpg',
+            'img/微信图片_20261007162826_94_7.jpg',
+            'img/微信图片_20261007162826_95_7.jpg',
+            'img/微信图片_20261007162827_96_7.jpg',
+            'img/微信图片_20261007165151_98_7.jpg'
+        ];
+
+        sceneStart[2] = function () {
+            const el = document.getElementById('scene2');
+            if (!el.childElementCount) {
+                scatterInto(el, scene2Photos, null);
+            }
+            setTimeout(() => gotoScene(3), 5200);
+        };
+
+        /* ================= 场景3：连播字幕 + 倒计时 ================= */
+        const titleEl = document.getElementById('title-text');
+        const sentences = [
+            'LASER主唱大人',
+            '今天是你的生日',
+            '请接收芝士和追光者的祝福',
+            '请打开声音'
+        ];
+
+        function showSentence(text, onDone) {
+            titleEl.classList.remove('hide');
+            titleEl.classList.add('show');
+            titleEl.textContent = '';
+            let i = 0;
+
+            function typeNext() {
+                if (i < text.length) {
+                    titleEl.textContent = text.slice(0, i + 1);
+                    i++;
+                    setTimeout(typeNext, 240);
+                } else {
+                    // 播放完立马消失
+                    setTimeout(() => {
+                        titleEl.classList.remove('show');
+                        titleEl.classList.add('hide');
+                        setTimeout(onDone, 800); // 等消失动画结束
+                    }, 300);
+                }
+            }
+            typeNext();
+        }
+
+        function showNumber(num, onDone) {
+            titleEl.classList.remove('hide');
+            titleEl.classList.add('show', 'horizontal');
+            titleEl.textContent = String(num);
+            setTimeout(() => {
+                titleEl.classList.remove('show');
+                titleEl.classList.add('hide');
+                setTimeout(() => {
+                    titleEl.classList.remove('horizontal');
+                    onDone();
+                }, 600);
+            }, 700);
+        }
+
+        function countdown(nums, index, onDone) {
+            if (index >= nums.length) {
+                if (onDone) onDone();
+                return;
+            }
+            showNumber(nums[index], () => countdown(nums, index + 1, onDone));
+        }
+
+        function playSequence(index) {
+            if (index >= sentences.length || !sentences[index]) {
+                countdown([3, 2, 1], 0, () => gotoScene(4));
+                return;
+            }
+            showSentence(sentences[index], () => playSequence(index + 1));
+        }
+
+        sceneStart[3] = function () {
+            setTimeout(() => playSequence(0), 400);
+        };
+
+        /* ================= 场景4：照片墙 + 祝福音频 ================= */
+        const scene4Photos = [
+            'img/微信图片_20261007144137_69_7.jpg',
+            'img/微信图片_20261007144138_70_7.jpg',
+            'img/微信图片_20261007144139_71_7.jpg',
+            'img/微信图片_20261007144140_72_7.jpg',
+            'img/微信图片_20261007144141_73_7.jpg',
+            'img/微信图片_20261007144141_74_7.jpg',
+            'img/微信图片_20261007144142_75_7.jpg',
+            'img/微信图片_20261007144143_76_7.jpg',
+            'img/微信图片_20261007144144_77_7.jpg',
+            'img/微信图片_20261007144145_78_7.jpg',
+            'img/微信图片_20261007144146_79_7.jpg',
+            'img/微信图片_20261007144147_80_7.jpg',
+            'img/微信图片_20261007144148_81_7.jpg',
+            'img/微信图片_20261007144149_82_7.jpg',
+            'img/微信图片_20261007144149_83_7.jpg',
+            'img/微信图片_20261007144150_84_7.jpg',
+            'img/微信图片_20261007144151_85_7.jpg',
+            'img/微信图片_20261007144152_86_7.jpg',
+            'img/微信图片_20261007144153_87_7.jpg',
+            'img/微信图片_20261007144154_88_7.jpg',
+            'img/微信图片_20261007144154_89_7.jpg',
+            'img/微信图片_20261007144155_90_7.jpg'
+        ];
+
+        const playlist = [
+            'music/录音机-20261006-1226(2).m4a',
+            'music/林致 天南海北我们都爱你(3).m4a',
+            'music/林致 天南海北我们都爱你(4).m4a',
+            'music/林致 天南海北我们都爱你(5).mp3',
+            'music/林致 天南海北我们都爱你(6).mp3',
+            'music/林致 天南海北我们都爱你(7).mp3',
+            'music/林致，天南海北我们都爱你(3).m4a',
+            'music/林致，天南海北我们都爱你(4).m4a',
+            'music/标准录音 21(2).mp3',
+            'music/20261007_204538.m4a'
+        ];
+
+        const audio = new Audio();
+        audio.loop = false;
+        let currentIndex = 0;
+        let playing = false;
+
+        function playNext() {
+            if (currentIndex >= playlist.length) {
+                currentIndex = 0;
+                playing = false;
+                updatePlayBtn();
+                return;
+            }
+            audio.src = playlist[currentIndex];
+            audio.play().then(() => {
+                playing = true;
+                updatePlayBtn();
+            }).catch(err => {
+                console.log('播放失败', err);
+            });
+            currentIndex++;
+        }
+
+        audio.addEventListener('ended', playNext);
+        audio.addEventListener('error', playNext);
+
+        const playBtn = document.getElementById('play-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        function updatePlayBtn() {
+            playBtn.textContent = playing ? '⏸ 暂停' : '▶ 播放祝福';
+        }
+
+        playBtn.addEventListener('click', () => {
+            if (playing) {
+                audio.pause();
+                playing = false;
+                updatePlayBtn();
+            } else {
+                if (!audio.src || audio.ended) {
+                    playNext();
+                } else {
+                    audio.play();
+                    playing = true;
+                    updatePlayBtn();
+                }
+            }
+        });
+
+        nextBtn.addEventListener('click', () => gotoScene(5));
+
+        sceneStart[4] = function () {
+            const el = document.getElementById('scene4');
+            if (el.querySelectorAll('.scatter-photo').length) return;
+            // 照片避开正中间的播放按钮区域
+            const avoid = {
+                x: window.innerWidth / 2 - 100,
+                y: window.innerHeight / 2 - 35,
+                w: 200,
+                h: 70
+            };
+            scatterInto(el, scene4Photos, avoid);
+        };
+
+        /* ================= 场景5：竖排逐笔书写 + 毛笔字形 ================= */
+        const text1 = '祝林致生日快乐！';
+        const text2 = '岁岁安然，';
+        const text3 = '歌声不息。';
+        const text4 = '莳意';
+        const text5 = 'by莳意';
+
+        function makeSlot(col) {
+            const slot = document.createElement('div');
+            slot.className = 'char-slot';
+            col.appendChild(slot);
+            return slot;
+        }
+
+        // 标点/字母等无法逐笔书写的字符：直接以毛笔字形浮现
+        function fadeSlot(ch, col, onDone) {
+            const slot = makeSlot(col);
+            slot.innerHTML = '<div class="brush-glyph">' + ch + '</div>';
+            requestAnimationFrame(() => slot.classList.add('written'));
+            setTimeout(onDone, 420);
+        }
+
+        function writeChar(ch, col, size, onDone) {
+            if (!/[\u4e00-\u9fa5]/.test(ch)) {
+                fadeSlot(ch, col, onDone);
+                return;
+            }
+            const slot = makeSlot(col);
+            const glyph = document.createElement('div');
+            glyph.className = 'brush-glyph';
+            glyph.textContent = ch;
+            slot.appendChild(glyph);
+
+            const writer = HanziWriter.create(slot, ch, {
+                width: size,
+                height: size,
+                padding: 2,
+                strokeColor: '#4682B4',
+                strokeAnimationSpeed: 3.2,
+                delayBetweenStrokes: 70,
+                showOutline: false
+            });
+            writer.animateCharacter().then(() => {
+                // 写完交叉淡化：笔画退场，毛笔字形登场
+                slot.classList.add('written');
+                setTimeout(onDone, 180);
+            }).catch(() => {
+                // 笔顺数据缺失时退回毛笔字形浮现
+                slot.classList.add('written');
+                setTimeout(onDone, 180);
+            });
+        }
+
+        function writeSequence(text, col, idx, size, onDone) {
+            if (idx >= text.length) {
+                if (onDone) onDone();
+                return;
+            }
+            writeChar(text[idx], col, size, () => writeSequence(text, col, idx + 1, size, onDone));
+        }
+
+        // 兜底：无网络（Hanzi Writer 加载失败）时逐字浮现
+        function typeVertical(text, col, idx, onDone) {
+            if (idx >= text.length) {
+                if (onDone) onDone();
+                return;
+            }
+            const slot = makeSlot(col);
+            slot.innerHTML = '<div class="brush-glyph">' + text[idx] + '</div>';
+            requestAnimationFrame(() => slot.classList.add('written'));
+            setTimeout(() => typeVertical(text, col, idx + 1, onDone), 300);
+        }
+
+        sceneStart[5] = function () {
+            const wrap = document.querySelector('#scene5 .v-text-wrap');
+            if (wrap.childElementCount) return;
+
+            const col1 = document.createElement('div');
+            col1.className = 'v-col';
+            const col2 = document.createElement('div');
+            col2.className = 'v-col';
+            const col3 = document.createElement('div');
+            col3.className = 'v-col';
+            const col4 = document.createElement('div');
+            col4.className = 'v-col v-col--name';
+            const col5 = document.createElement('div');
+            col5.className = 'v-col v-col--sign';
+            wrap.appendChild(col1);
+            wrap.appendChild(col2);
+            wrap.appendChild(col3);
+            wrap.appendChild(col4);
+            wrap.appendChild(col5);
+
+            function chain(t, c, size, cb) {
+                if (typeof HanziWriter !== 'undefined') {
+                    writeSequence(t, c, 0, size, cb);
+                } else {
+                    typeVertical(t, c, 0, cb);
+                }
+            }
+
+            setTimeout(() => {
+                chain(text1, col1, 58, () =>
+                    chain(text2, col2, 58, () =>
+                        chain(text3, col3, 58, () =>
+                            chain(text4, col4, 44, () =>
+                                chain(text5, col5, 34, null)))));
+            }, 500);
+        };
+    </script>
+</body>
+</html>
